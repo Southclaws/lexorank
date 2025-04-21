@@ -1,6 +1,7 @@
 package lexorank
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -68,4 +69,80 @@ func TestKey_Random(t *testing.T) {
 	k := Random()
 	r.NotEmpty(k)
 	fmt.Println(k)
+}
+
+func TestMarshalUnmarshalText(t *testing.T) {
+	orig := Middle
+	text, err := orig.MarshalText()
+	if err != nil {
+		t.Fatalf("marshal text failed: %v", err)
+	}
+
+	var out Key
+	if err := out.UnmarshalText(text); err != nil {
+		t.Fatalf("unmarshal text failed: %v", err)
+	}
+
+	if orig.Compare(out) != 0 {
+		t.Errorf("expected %v, got %v", orig, out)
+	}
+}
+
+func TestMarshalUnmarshalJSON(t *testing.T) {
+	orig := Middle
+	data, err := json.Marshal(orig)
+	if err != nil {
+		t.Fatalf("marshal json failed: %v", err)
+	}
+
+	var out Key
+	if err := json.Unmarshal(data, &out); err != nil {
+		t.Fatalf("unmarshal json failed: %v", err)
+	}
+
+	if orig.Compare(out) != 0 {
+		t.Errorf("expected %v, got %v", orig, out)
+	}
+}
+
+func TestSQLDriverValuer(t *testing.T) {
+	orig := Middle
+	val, err := orig.Value()
+	if err != nil {
+		t.Fatalf("value failed: %v", err)
+	}
+	strVal, ok := val.(string)
+	if !ok {
+		t.Fatalf("expected string, got %T", val)
+	}
+	if strVal != orig.String() {
+		t.Errorf("expected %s, got %s", orig.String(), strVal)
+	}
+}
+
+func TestSQLScanner(t *testing.T) {
+	orig := Middle
+	input := orig.String()
+
+	var k Key
+	if err := k.Scan(input); err != nil {
+		t.Fatalf("scan failed: %v", err)
+	}
+	if orig.Compare(k) != 0 {
+		t.Errorf("expected %v, got %v", orig, k)
+	}
+
+	// Test scanning from []byte
+	if err := k.Scan([]byte(input)); err != nil {
+		t.Fatalf("scan from bytes failed: %v", err)
+	}
+	if orig.Compare(k) != 0 {
+		t.Errorf("expected %v, got %v", orig, k)
+	}
+
+	// Invalid type
+	err := k.Scan(123)
+	if err == nil {
+		t.Fatal("expected error when scanning int, got nil")
+	}
 }

@@ -2,6 +2,10 @@ package lexorank
 
 import (
 	"bytes"
+	"database/sql"
+	"database/sql/driver"
+	"encoding"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -176,4 +180,74 @@ func Random() Key {
 
 func random() byte {
 	return byte(Minimum + rand.Intn(Maximum-Minimum))
+}
+
+var (
+	_ encoding.TextMarshaler   = (*Key)(nil)
+	_ encoding.TextUnmarshaler = (*Key)(nil)
+	_ json.Marshaler           = (*Key)(nil)
+	_ json.Unmarshaler         = (*Key)(nil)
+	_ driver.Valuer            = (*Key)(nil)
+	_ sql.Scanner              = (*Key)(nil)
+)
+
+// TextMarshaler
+func (k Key) MarshalText() ([]byte, error) {
+	return []byte(k.String()), nil
+}
+
+// TextUnmarshaler
+func (k *Key) UnmarshalText(text []byte) error {
+	parsed, err := ParseKey(string(text))
+	if err != nil {
+		return err
+	}
+	*k = *parsed
+	return nil
+}
+
+// JSON Marshaler
+func (k Key) MarshalJSON() ([]byte, error) {
+	return json.Marshal(k.String())
+}
+
+// JSON Unmarshaler
+func (k *Key) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	parsed, err := ParseKey(s)
+	if err != nil {
+		return err
+	}
+	*k = *parsed
+	return nil
+}
+
+// SQL Valuer
+func (k Key) Value() (driver.Value, error) {
+	return k.String(), nil
+}
+
+// SQL Scanner
+func (k *Key) Scan(value any) error {
+	switch v := value.(type) {
+	case string:
+		parsed, err := ParseKey(v)
+		if err != nil {
+			return err
+		}
+		*k = *parsed
+		return nil
+	case []byte:
+		parsed, err := ParseKey(string(v))
+		if err != nil {
+			return err
+		}
+		*k = *parsed
+		return nil
+	default:
+		return fmt.Errorf("cannot scan type %T into Key", value)
+	}
 }
