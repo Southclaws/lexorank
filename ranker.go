@@ -62,7 +62,11 @@ func (l ReorderableList) Insert(position uint) (*Key, error) {
 			return k, nil
 		}
 
-		l.rebalanceFrom(position, 0)
+		l.rebalanceFrom(position, 1)
+
+		// refresh prev/next keys
+		prev = l[position-1].GetKey()
+		next = l[position].GetKey()
 	}
 }
 
@@ -99,6 +103,18 @@ func (l ReorderableList) Prepend() Key {
 }
 
 func (l ReorderableList) rebalanceFrom(position uint, direction int) {
+	ok := l.tryRebalanceFrom(position, direction)
+	if ok {
+		return
+	}
+
+	// If we're here, the worst case scenario was reached: every key is adjacent
+	// to the next one. We need to normalise the entire list.
+
+	l.Normalise()
+}
+
+func (l ReorderableList) tryRebalanceFrom(position uint, direction int) bool {
 	if direction > 0 {
 		for i := int(position); i < len(l)-1; i++ {
 			curr := l[i].GetKey()
@@ -109,7 +125,7 @@ func (l ReorderableList) rebalanceFrom(position uint, direction int) {
 				l[i+1].SetKey(*nextKey)
 				if i == int(position) {
 					// first pass worked, can exit early.
-					return
+					return true
 				}
 			}
 
@@ -120,12 +136,12 @@ func (l ReorderableList) rebalanceFrom(position uint, direction int) {
 			curr := l[i].GetKey()
 			next := l[i-1].GetKey()
 
-			nextKey, ok := curr.Between(next)
+			nextKey, ok := next.Between(curr)
 			if ok {
 				l[i-1].SetKey(*nextKey)
 				if i == int(position) {
 					// first pass worked, can exit early.
-					return
+					return true
 				}
 			}
 
@@ -133,9 +149,10 @@ func (l ReorderableList) rebalanceFrom(position uint, direction int) {
 		}
 	}
 
-	// If we're here, the worst case scenario was reached: every key is adjacent
-	// to the next one. We need to normalise the entire list.
+	return false
+}
 
+func (l ReorderableList) Normalise() {
 	curr := NormaliseBottom
 	for i := 0; i < len(l); i++ {
 		nextKey, _ := curr.Between(*NormaliseTop)
@@ -145,4 +162,13 @@ func (l ReorderableList) rebalanceFrom(position uint, direction int) {
 
 		curr = nextKey
 	}
+}
+
+func (l ReorderableList) IsSorted() bool {
+	for i := 1; i < len(l); i++ {
+		if l[i-1].GetKey().Compare(l[i].GetKey()) >= 0 {
+			return false
+		}
+	}
+	return true
 }
