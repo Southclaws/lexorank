@@ -13,8 +13,6 @@ func TestKey_Defaults(t *testing.T) {
 	fmt.Println(Bottom)
 	fmt.Println(Top)
 	fmt.Println(Middle)
-	fmt.Println(NormaliseTop)
-	fmt.Println(NormaliseBottom)
 }
 
 func TestKey_Between_Insert(t *testing.T) {

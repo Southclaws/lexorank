@@ -37,10 +37,6 @@ var (
 		bucket: 0,
 	}
 
-	// When normalising a range, these defaults are the keys to use.
-	NormaliseTop, _    = Middle.Between(Top)
-	NormaliseBottom, _ = Middle.Between(Bottom)
-
 	// Charset for encoding positions
 	charset  = []byte("0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz")
 	maxValue = int(math.Pow(float64(len(charset)), float64(6))) // full keyspace
