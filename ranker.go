@@ -132,6 +132,13 @@ func (l ReorderableList) rebalanceFrom(position uint, direction int) {
 }
 
 func (l ReorderableList) tryRebalanceFrom(position uint, direction int) bool {
+	if direction > 0 && position >= uint(len(l)-1) {
+		return false // at end of list
+	}
+	if direction < 0 && position == 0 {
+		return false // at start of list
+	}
+
 	if direction > 0 {
 		for i := int(position); i < len(l)-1; i++ {
 			curr := l[i].GetKey()
@@ -172,7 +179,7 @@ func (l ReorderableList) tryRebalanceFrom(position uint, direction int) bool {
 // Normalise will distribute the keys evenly across the key space.
 func (l ReorderableList) Normalise() {
 	for i := 0; i < len(l); i++ {
-		f := float64(i) / float64(len(l))
+		f := float64(i+2) / float64(len(l)+3)
 		b := l[i].GetKey().bucket
 		nextKey := KeyAt(b, f)
 		l[i].SetKey(nextKey)

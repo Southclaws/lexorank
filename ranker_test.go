@@ -314,8 +314,8 @@ func TestTryRebalanceFrom_TightAtTop(t *testing.T) {
 
 	first := list[0]
 	last := list[len(list)-1]
-	a.Equal("0|0", first.GetKey().String())
-	a.Equal("0|yF;urS", last.GetKey().String())
+	a.Equal("0|3>K9[6", first.GetKey().String())
+	a.Equal("0|wl_qOt", last.GetKey().String())
 }
 
 func item(id int, s string) Reorderable {
