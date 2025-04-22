@@ -7,6 +7,7 @@ import (
 	"encoding"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"strconv"
 )
@@ -39,6 +40,11 @@ var (
 	// When normalising a range, these defaults are the keys to use.
 	NormaliseTop, _    = Middle.Between(Top)
 	NormaliseBottom, _ = Middle.Between(Bottom)
+
+	// Charset for encoding positions
+	charset  = []byte("0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz")
+	maxValue = int(math.Pow(float64(len(charset)), float64(6))) // full keyspace
+
 )
 
 const (
@@ -53,6 +59,10 @@ type Key struct {
 }
 
 func (k Key) String() string {
+	return string(k.raw)
+}
+
+func (k Key) GoString() string {
 	return string(k.raw)
 }
 
@@ -109,6 +119,31 @@ func ParseKey(s string) (*Key, error) {
 		rank:   rank,
 		bucket: uint8(bucket),
 	}, nil
+}
+
+// KeyAt generates a key from a specific numeric position in the key space.
+func KeyAt(bucket uint8, f float64) Key {
+	bucketChar := byte(bucket + 48)
+
+	base := float64(len(charset)) // 75
+	key := make([]byte, 0, rankLength)
+
+	for i := 0; i < rankLength; i++ {
+		f *= base
+		index := int(f)
+		if index >= len(charset) {
+			index = len(charset) - 1 // clamp, just in case
+		}
+		key = append(key, charset[index])
+		f -= float64(index) // keep only the fractional part
+	}
+
+	k, err := ParseKey(string(append([]byte{bucketChar, '|'}, key...)))
+	if err != nil {
+		panic(err)
+	}
+
+	return *k
 }
 
 // Between returns a new key that is between the current key and the second key.
@@ -173,17 +208,8 @@ func mid(a, b byte) (byte, bool) {
 }
 
 func Random() Key {
-	rank := []byte{random(), random(), random(), random(), random(), random()}
-	raw := append([]byte{'0', '|'}, rank...)
-	return Key{
-		raw:    raw,
-		rank:   rank,
-		bucket: 0,
-	}
-}
-
-func random() byte {
-	return byte(Minimum + rand.Intn(Maximum-Minimum))
+	f := rand.Float64()
+	return KeyAt(0, f)
 }
 
 var (

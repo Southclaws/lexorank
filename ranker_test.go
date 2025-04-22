@@ -303,6 +303,21 @@ func TestTryRebalanceFrom_ForwardFirstPassSucceeds(t *testing.T) {
 	a.NotEqual(mid.String(), list[1].GetKey().String(), "key should have changed during rebalance")
 }
 
+func TestTryRebalanceFrom_TightAtTop(t *testing.T) {
+	a := assert.New(t)
+
+	list := ReorderableList{
+		item(5, "0|UUUUUU"), item(6, "0|g"), item(7, "0|g"), item(8, "0|g"), item(9, "0|g"), item(10, "0|g"), item(11, "0|k"), item(12, "0|p"), item(13, "0|p"), item(14, "0|p"), item(15, "0|p"), item(16, "0|u"), item(17, "0|u"), item(18, "0|w"), item(19, "0|x"), item(20, "0|y"), item(21, "0|yU"), item(22, "0|yg"), item(23, "0|yp"), item(24, "0|yu"), item(25, "0|yw"), item(26, "0|yx"), item(27, "0|yy"), item(28, "0|yyU"), item(29, "0|yyg"), item(30, "0|yyp"), item(31, "0|yyu"), item(32, "0|yyw"), item(33, "0|yyx"), item(34, "0|yyx"), item(35, "0|yyy"), item(36, "0|yyyU"), item(37, "0|yyyp"), item(38, "0|yyyu"), item(39, "0|yyyw"), item(40, "0|yyyy"), item(41, "0|yyyyB"), item(42, "0|yyyyU"), item(43, "0|yyyyp"), item(44, "0|yyyyr"), item(45, "0|yyyyu"), item(46, "0|yyyyw"), item(47, "0|yyyyx"), item(48, "0|yyyyy"),
+	}
+
+	list.Normalise()
+
+	first := list[0]
+	last := list[len(list)-1]
+	a.Equal("0|0", first.GetKey().String())
+	a.Equal("0|yF;urS", last.GetKey().String())
+}
+
 func item(id int, s string) Reorderable {
 	o, err := ParseKey(s)
 	if err != nil {

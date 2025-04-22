@@ -1,6 +1,8 @@
 package lexorank
 
-import "fmt"
+import (
+	"fmt"
+)
 
 var ErrOutOfBounds = fmt.Errorf("out of bounds")
 
@@ -160,15 +162,13 @@ func (l ReorderableList) tryRebalanceFrom(position uint, direction int) bool {
 	return false
 }
 
+// Normalise will distribute the keys evenly across the key space.
 func (l ReorderableList) Normalise() {
-	curr := NormaliseBottom
 	for i := 0; i < len(l); i++ {
-		nextKey, _ := curr.Between(*NormaliseTop)
-		nextKey.bucket = l[i].GetKey().bucket
-
-		l[i].SetKey(*nextKey)
-
-		curr = nextKey
+		f := float64(i) / float64(len(l))
+		b := l[i].GetKey().bucket
+		nextKey := KeyAt(b, f)
+		l[i].SetKey(nextKey)
 	}
 }
 
