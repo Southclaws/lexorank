@@ -116,6 +116,10 @@ func ParseKey(s string) (*Key, error) {
 // and thus a rebalance is required. "Too long" is very subjective. The limit
 // set in this library is 6 which gives you around 400k worst case re-orders.
 func (k Key) Between(to Key) (*Key, bool) {
+	if k.Compare(to) > 0 {
+		return to.Between(k)
+	}
+
 	mk := &Key{
 		raw:    []byte{},
 		rank:   Rank{},

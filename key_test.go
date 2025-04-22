@@ -146,3 +146,22 @@ func TestSQLScanner(t *testing.T) {
 		t.Fatal("expected error when scanning int, got nil")
 	}
 }
+
+func TestBetween_OrderIndependent(t *testing.T) {
+	a, _ := ParseKey("0|a")
+	b, _ := ParseKey("0|z")
+
+	forward, okA := a.Between(*b)
+	if !okA {
+		t.Fatal("Expected a.Between(b) to succeed")
+	}
+
+	backward, okB := b.Between(*a)
+	if !okB {
+		t.Fatal("Expected b.Between(a) to succeed")
+	}
+
+	if backward != nil && forward.String() != backward.String() {
+		t.Errorf("Between should be symmetric, but got %s vs %s", forward.String(), backward.String())
+	}
+}
