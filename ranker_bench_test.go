@@ -1,7 +1,6 @@
 package lexorank_test
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
 	"testing"
@@ -72,8 +71,6 @@ func BenchmarkReorderableList_RandomInsert(b *testing.B) {
 
 	for i := 0; i < maxItems; i++ {
 		pos := r.Intn(len(list) + 1)
-
-		fmt.Println("insert", i, pos)
 
 		key, err := list.Insert(uint(pos))
 		if err != nil {
