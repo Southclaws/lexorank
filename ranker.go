@@ -76,6 +76,10 @@ func (l ReorderableList) Insert(position uint) (*Key, error) {
 // In a worst case scenario, if the list already has a key at the maximum index,
 // the list is rebalanced to make space at the end for the new generated key.
 func (l ReorderableList) Append() Key {
+	if len(l) == 0 {
+		return Bottom
+	}
+
 	last := l[len(l)-1]
 	for {
 		k, ok := last.GetKey().Between(Top)
@@ -92,6 +96,10 @@ func (l ReorderableList) Append() Key {
 //
 // Same worst case scenario as Append.
 func (l ReorderableList) Prepend() Key {
+	if len(l) == 0 {
+		return Top
+	}
+
 	for {
 		k, ok := Bottom.Between(l[0].GetKey())
 		if ok {
