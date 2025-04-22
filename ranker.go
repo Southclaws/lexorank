@@ -58,7 +58,7 @@ func (l ReorderableList) Insert(position uint) (*Key, error) {
 	prev := l[position-1].GetKey()
 	next := l[position].GetKey()
 
-	for {
+	for range 2 {
 		k, ok := prev.Between(next)
 		if ok {
 			return k, nil
@@ -70,6 +70,8 @@ func (l ReorderableList) Insert(position uint) (*Key, error) {
 		prev = l[position-1].GetKey()
 		next = l[position].GetKey()
 	}
+
+	return nil, fmt.Errorf("failed to insert key after rebalance")
 }
 
 // Append does not change the size of the underlying list, but it may rebalance
@@ -82,15 +84,17 @@ func (l ReorderableList) Append() Key {
 		return Bottom
 	}
 
-	last := l[len(l)-1]
-	for {
-		k, ok := last.GetKey().Between(Top)
+	for range 2 {
+		last := l[len(l)-1].GetKey()
+		k, ok := last.Between(TopOf(last.bucket))
 		if ok {
 			return *k
 		}
 
 		l.rebalanceFrom(uint(len(l)-1), -1)
 	}
+
+	panic("failed to append key after rebalance")
 }
 
 // Prepend does not change the size of the underlying list, but it may rebalance
@@ -102,14 +106,17 @@ func (l ReorderableList) Prepend() Key {
 		return Top
 	}
 
-	for {
-		k, ok := Bottom.Between(l[0].GetKey())
+	for range 2 {
+		first := l[0].GetKey()
+		k, ok := BottomOf(first.bucket).Between(first)
 		if ok {
 			return *k
 		}
 
 		l.rebalanceFrom(0, 1)
 	}
+
+	panic("failed to prepend key after rebalance")
 }
 
 func (l ReorderableList) rebalanceFrom(position uint, direction int) {
@@ -148,7 +155,7 @@ func (l ReorderableList) tryRebalanceFrom(position uint, direction int) bool {
 
 			nextKey, ok := next.Between(curr)
 			if ok {
-				l[i-1].SetKey(*nextKey)
+				l[i].SetKey(*nextKey)
 				if i == int(position) {
 					// first pass worked, can exit early.
 					return true

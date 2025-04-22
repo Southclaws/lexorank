@@ -271,7 +271,7 @@ func TestTryRebalanceFrom_BackwardFailsWithWrongBetweenOrder(t *testing.T) {
 
 	// Two adjacent keys, where Between(curr, prev) will fail
 	start, _ := ParseKey("1|aaaaaa")
-	end, _ := start.Between(Top) // something like 1|m
+	end, _ := start.Between(TopOf(1)) // something like 1|m
 
 	list := ReorderableList{
 		&Item{ID: 0, Rank: *start},
@@ -290,7 +290,7 @@ func TestTryRebalanceFrom_ForwardFirstPassSucceeds(t *testing.T) {
 	a := assert.New(t)
 
 	start, _ := ParseKey("1|aaaaaa")
-	mid, _ := start.Between(Top) // enough space
+	mid, _ := start.Between(TopOf(1)) // enough space
 
 	list := ReorderableList{
 		&Item{ID: 0, Rank: *start},

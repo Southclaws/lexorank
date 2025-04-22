@@ -47,6 +47,30 @@ var (
 
 )
 
+func TopOf(b uint8) Key {
+	return Key{
+		raw:    []byte{byte(b + '0'), '|', Maximum, Maximum, Maximum, Maximum, Maximum, Maximum},
+		rank:   []byte{Maximum, Maximum, Maximum, Maximum, Maximum, Maximum},
+		bucket: b,
+	}
+}
+
+func BottomOf(b uint8) Key {
+	return Key{
+		raw:    []byte{byte(b + '0'), '|', Minimum},
+		rank:   []byte{Minimum},
+		bucket: b,
+	}
+}
+
+func MiddleOf(b uint8) Key {
+	return Key{
+		raw:    []byte{byte(b + '0'), '|', Midpoint, Midpoint, Midpoint, Midpoint, Midpoint, Midpoint},
+		rank:   []byte{Midpoint, Midpoint, Midpoint, Midpoint, Midpoint, Midpoint},
+		bucket: b,
+	}
+}
+
 const (
 	keyLength  = 8 // the full key length "0|aaaaaa"
 	rankLength = 6 // the part after the |: "aaaaaa"
@@ -132,10 +156,14 @@ func KeyAt(bucket uint8, f float64) Key {
 		f *= base
 		index := int(f)
 		if index >= len(charset) {
-			index = len(charset) - 1 // clamp, just in case
+			index = len(charset) - 1
 		}
 		key = append(key, charset[index])
-		f -= float64(index) // keep only the fractional part
+		f -= float64(index)
+
+		if f <= 0.0 {
+			break
+		}
 	}
 
 	k, err := ParseKey(string(append([]byte{bucketChar, '|'}, key...)))

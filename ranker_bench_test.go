@@ -1,7 +1,9 @@
 package lexorank_test
 
 import (
+	"fmt"
 	"math"
+	"math/rand"
 	"testing"
 
 	"github.com/Southclaws/lexorank"
@@ -48,5 +50,41 @@ func BenchmarkReorderableList_FullSpace(b *testing.B) {
 		if cmp >= 0 {
 			b.Fatalf("Keys not increasing at %d: left: %s, right: %s", i, left.String(), right.String())
 		}
+	}
+}
+
+func BenchmarkReorderableList_RandomInsert(b *testing.B) {
+	r := rand.New(rand.NewSource(42))
+
+	const base = 75
+	const precision = 2
+	maxItems := int(math.Pow(base, precision))
+
+	b.Log("Max items:", maxItems)
+
+	list := make(lexorank.ReorderableList, 0)
+
+	b.ResetTimer()
+	list.Normalise()
+	b.StopTimer()
+
+	b.Log("Done normalising list:")
+
+	for i := 0; i < maxItems; i++ {
+		pos := r.Intn(len(list) + 1)
+
+		fmt.Println("insert", i, pos)
+
+		key, err := list.Insert(uint(pos))
+		if err != nil {
+			list.Normalise()
+			key, err = list.Insert(uint(pos))
+			if err != nil {
+				b.Fatalf("Insert failed after normalisation at iteration %d: %v", i, err)
+			}
+		}
+
+		list = append(list, &reorderableNode{id: i, sort: *key})
+
 	}
 }
