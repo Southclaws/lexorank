@@ -133,6 +133,10 @@ func ParseKey(s string) (*Key, error) {
 }
 
 func parseRaw(bucket uint8, rank []byte) (*Key, error) {
+	if len(rank) > rankLength {
+		return nil, fmt.Errorf("invalid rank length: %d", len(rank))
+	}
+
 	for _, b := range rank {
 		if b < Minimum || b > Maximum {
 			return nil, fmt.Errorf("invalid byte value: %c", b)
