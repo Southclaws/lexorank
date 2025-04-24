@@ -3,6 +3,7 @@ package lexorank
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,7 +43,7 @@ func TestKey_Between_Rebalance(t *testing.T) {
 
 	got, ok := current.Between(*next)
 	r.False(ok)
-	r.Equal("1|aaaaaaU", got.String())
+	r.Nil(got)
 }
 
 func TestKey_Between_AtStart(t *testing.T) {
@@ -57,7 +58,33 @@ func TestKey_Between_AtStart(t *testing.T) {
 
 	got, ok := current.Between(*next)
 	r.False(ok)
-	r.Equal("1|0", got.String())
+	r.Nil(got)
+}
+
+func TestKey_Between_AtTopClose(t *testing.T) {
+	r := require.New(t)
+
+	current, err := ParseKey("0|yyyyy")
+	r.NoError(err)
+
+	next, err := ParseKey("0|zzzzzz")
+	r.NoError(err)
+
+	got, ok := current.Between(*next)
+	r.True(ok)
+	r.Equal("0|yyyyyU", got.String())
+	r.True(sort.StringsAreSorted([]string{current.String(), got.String(), next.String()}))
+}
+
+func TestKey_Between_AtTopNoSpace(t *testing.T) {
+	r := require.New(t)
+
+	current, err := ParseKey("0|zzzzzz")
+	r.NoError(err)
+
+	got, ok := current.Between(Top)
+	r.False(ok)
+	r.Nil(got)
 }
 
 func TestKey_Random(t *testing.T) {

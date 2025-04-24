@@ -204,8 +204,13 @@ func (k Key) Between(to Key) (*Key, bool) {
 		break
 	}
 
+	valid := len(mk.rank) <= rankLength
+	if !valid {
+		return nil, false
+	}
+
 	if string(mk.rank) >= string(to.rank) {
-		return &k, false
+		return nil, false
 	}
 
 	// ASCII representation of bucket value, ranges from 0-2 so 1 basic addition works fine
@@ -214,7 +219,7 @@ func (k Key) Between(to Key) (*Key, bool) {
 	mk.raw = append(mk.raw, []byte{bucketChar, '|'}...)
 	mk.raw = append(mk.raw, mk.rank...)
 
-	return mk, len(mk.rank) < rankLength
+	return mk, valid
 }
 
 func mid(a, b byte) (byte, bool) {
