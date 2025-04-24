@@ -128,16 +128,23 @@ func ParseKey(s string) (*Key, error) {
 	}
 
 	rank := []byte(s[2:])
+
+	return parseRaw(uint8(bucket), rank)
+}
+
+func parseRaw(bucket uint8, rank []byte) (*Key, error) {
 	for _, b := range rank {
 		if b < Minimum || b > Maximum {
 			return nil, fmt.Errorf("invalid byte value: %c", b)
 		}
 	}
 
+	raw := append([]byte{byte(bucket + 48), '|'}, rank...)
+
 	return &Key{
-		raw:    []byte(s),
+		raw:    raw,
 		rank:   rank,
-		bucket: uint8(bucket),
+		bucket: bucket,
 	}, nil
 }
 
@@ -222,6 +229,34 @@ func (k Key) Between(to Key) (*Key, bool) {
 	return mk, valid
 }
 
+func (k Key) After(distance int64) (*Key, bool) {
+	index := decodeBase75(k.rank)
+	next := encodeBase75(index + distance)
+
+	n, err := parseRaw(k.bucket, next)
+	if err != nil {
+		return nil, false
+	}
+
+	return n, true
+}
+
+func (k Key) Before(distance int64) (*Key, bool) {
+	index := decodeBase75(k.rank)
+	if index-distance < 0 {
+		return nil, false
+	}
+
+	next := encodeBase75(index - distance)
+
+	n, err := parseRaw(k.bucket, next)
+	if err != nil {
+		return nil, false
+	}
+
+	return n, true
+}
+
 func mid(a, b byte) (byte, bool) {
 	if a == b {
 		return a, false
@@ -234,6 +269,31 @@ func mid(a, b byte) (byte, bool) {
 	}
 
 	return m, true
+}
+
+func decodeBase75(rank []byte) int64 {
+	var index int64
+	for _, c := range rank {
+		pos := int64(bytes.IndexByte(charset, c))
+		if pos == -1 {
+			panic("invalid character in rank")
+		}
+		index = index*int64(len(charset)) + pos
+	}
+	return index
+}
+
+func encodeBase75(val int64) []byte {
+	if val == 0 {
+		return []byte{charset[0]}
+	}
+	var out []byte
+	for val > 0 {
+		rem := val % int64(len(charset))
+		out = append([]byte{charset[rem]}, out...)
+		val = val / int64(len(charset))
+	}
+	return out
 }
 
 func Random() Key {

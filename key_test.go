@@ -87,6 +87,94 @@ func TestKey_Between_AtTopNoSpace(t *testing.T) {
 	r.Nil(got)
 }
 
+func TestKey_After(t *testing.T) {
+	r := require.New(t)
+	a := assert.New(t)
+
+	start, err := ParseKey("0|0")
+	r.NoError(err)
+
+	after, ok := start.After(10)
+	r.True(ok)
+	a.Equal("0|:", after.String())
+
+	a.True(start.Compare(*after) < 0, "expected start < after")
+
+	startIndex := decodeBase75(start.rank)
+	afterIndex := decodeBase75(after.rank)
+	a.Equal(int64(10), afterIndex-startIndex)
+}
+
+func TestKey_AfterLong(t *testing.T) {
+	r := require.New(t)
+	a := assert.New(t)
+
+	start, err := ParseKey("0|zh2:dA")
+	r.NoError(err)
+
+	after, ok := start.After(10000)
+	r.True(ok)
+	a.Equal("0|zh2<SZ", after.String())
+
+	a.True(start.Compare(*after) < 0, "expected start < after")
+
+	startIndex := decodeBase75(start.rank)
+	afterIndex := decodeBase75(after.rank)
+	a.Equal(int64(10000), afterIndex-startIndex)
+}
+
+func TestKey_Before(t *testing.T) {
+	r := require.New(t)
+	a := assert.New(t)
+
+	start, err := ParseKey("0|zzzzzz")
+	r.NoError(err)
+
+	before, ok := start.Before(10)
+	r.True(ok)
+	a.Equal("0|zzzzzp", before.String())
+
+	a.True(start.Compare(*before) > 0, "expected start > before")
+
+	startIndex := decodeBase75(start.rank)
+	afterIndex := decodeBase75(before.rank)
+	a.Equal(int64(10), startIndex-afterIndex)
+}
+
+func TestKey_BeforeLong(t *testing.T) {
+	r := require.New(t)
+	a := assert.New(t)
+
+	start, err := ParseKey("0|zh2:dA")
+	r.NoError(err)
+
+	before, ok := start.Before(10000)
+	r.True(ok)
+	a.Equal("0|zh28ts", before.String())
+
+	a.True(start.Compare(*before) > 0, "expected start > before")
+
+	startIndex := decodeBase75(start.rank)
+	afterIndex := decodeBase75(before.rank)
+	a.Equal(int64(10000), startIndex-afterIndex)
+}
+
+func TestBase75Encoding(t *testing.T) {
+	r := require.New(t)
+	a := assert.New(t)
+
+	current, err := ParseKey("0|zzzzzz")
+	r.NoError(err)
+
+	rawrank := []byte(current.rank)
+
+	decoded := decodeBase75(rawrank)
+	r.Equal(int64(177978515624), decoded)
+
+	encoded := encodeBase75(decoded)
+	a.Equal(rawrank, encoded)
+}
+
 func TestKey_Random(t *testing.T) {
 	r := require.New(t)
 	// a := assert.New(t)
