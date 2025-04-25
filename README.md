@@ -53,7 +53,7 @@ You can also manually normalise (distribute all keys evenly across a set)
 
 ```go
 list := lexorank.ReorderableList(<yourdata>)
-list.Normalise(3)
+list.Normalise()
 // write `list` back to your DB
 ```
 
