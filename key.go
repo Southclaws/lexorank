@@ -196,9 +196,14 @@ func (k Key) Between(to Key) (*Key, bool) {
 		bucket: k.bucket,
 	}
 
+	below := false
 	for i := 0; ; i++ {
 		prevChar := k.rank.atMin(i)
-		nextChar := to.rank.atMax(i)
+
+		nextChar := byte(Maximum)
+		if !below {
+			nextChar = to.rank.atMax(i)
+		}
 
 		if prevChar == nextChar {
 			mk.rank = append(mk.rank, prevChar)
@@ -208,6 +213,7 @@ func (k Key) Between(to Key) (*Key, bool) {
 		m, ok := mid(prevChar, nextChar)
 		if !ok {
 			mk.rank = append(mk.rank, prevChar)
+			below = true
 			continue
 		}
 
@@ -220,7 +226,7 @@ func (k Key) Between(to Key) (*Key, bool) {
 		return nil, false
 	}
 
-	if string(mk.rank) >= string(to.rank) {
+	if string(mk.rank) <= string(k.rank) || string(mk.rank) >= string(to.rank) {
 		return nil, false
 	}
 

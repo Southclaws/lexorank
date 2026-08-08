@@ -31,6 +31,22 @@ func TestKey_Between_Insert(t *testing.T) {
 	a.Equal("1|aU", got.String())
 }
 
+func TestKey_Between_Check_Bounds(t *testing.T) {
+	r := require.New(t)
+	a := assert.New(t)
+
+	current, err := ParseKey("0|19")
+	r.NoError(err)
+
+	next, err := ParseKey("0|21")
+	r.NoError(err)
+
+	got, ok := current.Between(*next)
+	r.True(ok)
+	a.Greater(got.Compare(*current), 0)
+	a.Less(got.Compare(*next), 0)
+}
+
 func TestKey_Between_Rebalance(t *testing.T) {
 	r := require.New(t)
 	// a := assert.New(t)
