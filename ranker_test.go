@@ -1,6 +1,8 @@
 package lexorank
 
 import (
+	"bytes"
+	"slices"
 	"sort"
 	"testing"
 
@@ -115,6 +117,126 @@ func TestInsert_TriggersRebalance(t *testing.T) {
 
 	// The fallback rebalanced list[1], so its key must have changed
 	a.NotEqual(oldKey, list[1].GetKey().String(), "rebalance should have changed the key")
+}
+
+func TestInsert_PartialRebalance(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		keys      []string
+		position  uint
+		unchanged []int
+	}{
+		{
+			name:      "issue 2",
+			keys:      []string{"0|AAAAAA", "0|AAAAAB", "0|B"},
+			position:  1,
+			unchanged: []int{0, 2},
+		},
+		{
+			name:      "space beyond adjacent keys",
+			keys:      []string{"0|AAAAAA", "0|AAAAAB", "0|AAAAAC", "0|B"},
+			position:  1,
+			unchanged: []int{0, 3},
+		},
+		{
+			name:      "middle of list",
+			keys:      []string{"0|9", "0|AAAAAA", "0|AAAAAB", "0|B", "0|C"},
+			position:  2,
+			unchanged: []int{0, 1, 3, 4},
+		},
+		{
+			name:      "prepend with immediate space",
+			keys:      []string{"0|000000", "0|B"},
+			position:  0,
+			unchanged: []int{1},
+		},
+		{
+			name:      "prepend at bottom boundary",
+			keys:      []string{"0|000000", "0|000001", "0|B"},
+			position:  0,
+			unchanged: []int{2},
+		},
+		{
+			name:     "prepend needs full normalisation",
+			keys:     []string{"0|000000", "0|000002"},
+			position: 0,
+		},
+		{
+			name:     "append needs full normalisation",
+			keys:     []string{"0|zzzzzx", "0|zzzzzz"},
+			position: 2,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			list := make(ReorderableList, len(tt.keys))
+			for i, key := range tt.keys {
+				list[i] = item(i, key)
+			}
+
+			key, err := list.Insert(tt.position)
+			require.NoError(t, err)
+			require.NotNil(t, key)
+			if tt.position > 0 {
+				assert.Less(t, list[tt.position-1].GetKey().String(), key.String())
+			}
+			if tt.position < uint(len(list)) {
+				assert.Less(t, key.String(), list[tt.position].GetKey().String())
+			}
+			assert.True(t, list.IsSorted())
+			for _, i := range tt.unchanged {
+				assert.Equal(t, tt.keys[i], list[i].GetKey().String(), "unaffected item %d", i)
+			}
+		})
+	}
+}
+
+func FuzzReorderableList_Insert(f *testing.F) {
+	initial := [][]string{
+		{"AAAAAA", "AAAAAB", "B"},
+		{"AAAAAA", "AAAAAB", "AAAAAC", "B"},
+		{"000000", "B"},
+		{"000000", "000001", "B"},
+		{"y", "zzzzzy", "zzzzzz"},
+		{"000000", "000001", "000002"},
+		{"zzzzzx", "zzzzzy", "zzzzzz"},
+	}
+	for i := range initial {
+		for bucket := uint8(0); bucket < 3; bucket++ {
+			f.Add(uint8(i), bucket, []byte{1, 0, 255, 2, 1})
+			f.Add(uint8(i), bucket, bytes.Repeat([]byte{1}, 128))
+		}
+	}
+	f.Fuzz(func(t *testing.T, start, bucket uint8, positions []byte) {
+		// Bound each sequence while retaining repeated inserts into dense gaps.
+		if len(positions) > 256 {
+			positions = positions[:256]
+		}
+		prefix := string([]byte{'0' + bucket%3, '|'})
+		var list ReorderableList
+		for i, rank := range initial[int(start)%len(initial)] {
+			list = append(list, item(i, prefix+rank))
+		}
+
+		for step, p := range positions {
+			position := int(p) % (len(list) + 1)
+			length := len(list)
+			key, err := list.Insert(uint(position))
+			require.NoError(t, err, "step %d at position %d", step, position)
+			require.NotNil(t, key)
+			require.Len(t, list, length, "Insert must only generate a key")
+
+			list = slices.Insert(list, position, Reorderable(&Item{ID: length, Rank: *key}))
+			for i, node := range list {
+				value := node.GetKey().String()
+				require.Equal(t, prefix, value[:2], "bucket must be preserved")
+				require.LessOrEqual(t, len(value), 8, "rank must fit six characters")
+				if i > 0 {
+					require.Less(t, list[i-1].GetKey().String(), value,
+						"keys must be unique and ordered after step %d", step)
+				}
+			}
+		}
+	})
 }
 
 func TestReorderableList_Append(t *testing.T) {
@@ -300,7 +422,8 @@ func TestTryRebalanceFrom_ForwardFirstPassSucceeds(t *testing.T) {
 	ok := list.tryRebalanceFrom(0, 1)
 	a.True(ok, "expected forward rebalance to succeed on first pass")
 	a.True(sort.IsSorted(list), "list should still be sorted")
-	a.NotEqual(mid.String(), list[1].GetKey().String(), "key should have changed during rebalance")
+	a.NotEqual(start.String(), list[0].GetKey().String(), "requested item should move towards its successor")
+	a.Equal(mid.String(), list[1].GetKey().String(), "successor should be unchanged")
 }
 
 func TestTryRebalanceFrom_TightAtTop(t *testing.T) {

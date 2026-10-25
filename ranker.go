@@ -122,12 +122,22 @@ func (l ReorderableList) Prepend() Key {
 func (l ReorderableList) rebalanceFrom(position uint, direction int) {
 	ok := l.tryRebalanceFrom(position, direction)
 	if ok {
-		return
+		key := l[position].GetKey()
+		bound := BottomOf(key.bucket)
+		if direction < 0 {
+			bound = TopOf(key.bucket)
+		}
+		neighbour := int(position) - direction
+		if neighbour >= 0 && neighbour < len(l) {
+			bound = l[neighbour].GetKey()
+		}
+		if _, ok := bound.Between(key); ok {
+			return
+		}
 	}
 
-	// If we're here, the worst case scenario was reached: every key is adjacent
-	// to the next one. We need to normalise the entire list.
-
+	// A partial rebalance may move keys without leaving enough room for an
+	// insertion. Normalise the entire list if the requested gap is still full.
 	l.Normalise()
 }
 
@@ -145,32 +155,41 @@ func (l ReorderableList) tryRebalanceFrom(position uint, direction int) bool {
 			next := l[i+1].GetKey()
 
 			nextKey, ok := curr.Between(next)
-			if ok {
-				l[i+1].SetKey(*nextKey)
-				if i == int(position) {
-					// first pass worked, can exit early.
-					return true
-				}
+			if !ok {
+				continue
 			}
 
-			// If not OK, continue to rebalance forwards by shifting every key
-		}
-	} else {
-		for i := int(position); i > 0; i-- {
-			curr := l[i].GetKey()
-			next := l[i-1].GetKey()
-
-			nextKey, ok := next.Between(curr)
-			if ok {
-				l[i].SetKey(*nextKey)
-				if i == int(position) {
-					// first pass worked, can exit early.
-					return true
+			// Move the current item towards the next one, then propagate the
+			// available space back to the item at the requested position.
+			l[i].SetKey(*nextKey)
+			for j := i - 1; j >= int(position); j-- {
+				curr = l[j].GetKey()
+				next = l[j+1].GetKey()
+				nextKey, ok = curr.Between(next)
+				if !ok {
+					return false
 				}
+				l[j].SetKey(*nextKey)
 			}
-
-			// If not OK, continue to rebalance forwards by shifting every key
+			return true
 		}
+		return false
+	}
+
+	for i := int(position); i > 0; i-- {
+		curr := l[i].GetKey()
+		next := l[i-1].GetKey()
+
+		nextKey, ok := next.Between(curr)
+		if ok {
+			l[i].SetKey(*nextKey)
+			if i == int(position) {
+				// first pass worked, can exit early.
+				return true
+			}
+		}
+
+		// If not OK, continue to rebalance backwards by shifting every key
 	}
 
 	return false

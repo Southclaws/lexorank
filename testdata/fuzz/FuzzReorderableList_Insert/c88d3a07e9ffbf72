@@ -1,0 +1,4 @@
+go test fuzz v1
+byte('e')
+byte('K')
+[]byte("181217y81B9y1x7'y+C\x011\x01\x0179Xy AC#$$")
